@@ -487,3 +487,9 @@ add_custom_target(install_python_requirements
 if(EXISTS "${PX4_SOURCE_DIR}/platforms/${PX4_PLATFORM}/cmake/finalize.cmake")
 	include(finalize)
 endif()
+
+################################################################################################################
+#add_subdirectory(src/examples/att_pid EXCLUDE_FROM_ALL)
+#add_subdirectory(src/examples/my_hello EXCLUDE_FROM_ALL)
+#add_subdirectory(src/examples/my_work_queue EXCLUDE_FROM_ALL)
+#add_subdirectory(src/templates/template_module EXCLUDE_FROM_ALL)

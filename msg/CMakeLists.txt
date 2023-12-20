@@ -49,6 +49,7 @@ set(msg_files
 	Airspeed.msg
 	AirspeedValidated.msg
 	AirspeedWind.msg
+	AttPidParam.msg
 	AutotuneAttitudeControlStatus.msg
 	BatteryStatus.msg
 	ButtonEvent.msg
@@ -127,6 +128,8 @@ set(msg_files
 	MissionResult.msg
 	MountOrientation.msg
 	ModeCompleted.msg
+	MyAttitude.msg
+	MyAttLoopOut.msg
 	NavigatorMissionItem.msg
 	NormalizedUnsignedSetpoint.msg
 	NpfgStatus.msg

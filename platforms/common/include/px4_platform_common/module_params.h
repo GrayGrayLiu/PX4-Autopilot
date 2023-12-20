@@ -47,16 +47,16 @@ class ModuleParams : public ListNode<ModuleParams *>
 {
 public:
 
-	ModuleParams(ModuleParams *parent)
-	{
-		setParent(parent);
+	ModuleParams(ModuleParams *parent)  //如果有ModuleParams的父类，则传入父类的指针，如果没有传入空指针即可，传入这个ModuleParams的指针是为了能把自己
+	{                                   //记录到父类的_children容器里，因为类的特性只能子类继承父类，所以子类可以调用父类的非私有方法和属性，但父类无法
+		setParent(parent);              //调用子类，所以为了能使父类调用子类，可以使用指针的方法。
 	}
 
 	/**
 	 * @brief Sets the parent module. This is typically not required,
 	 *         only in cases where the parent cannot be set via constructor.
 	 */
-	void setParent(ModuleParams *parent)
+	void setParent(ModuleParams *parent)  //通过这样层层设置父节点，最终会有一个源父节点，我们可以通过这个源父节点，对下面每一层子节点进行更新
 	{
 		if (parent) {
 			parent->_children.add(this);
@@ -82,10 +82,10 @@ protected:
 	 *        It will automatically call updateParams() for all children, which then call updateParamsImpl().
 	 */
 	virtual void updateParams()
-	{
-		for (const auto &child : _children) {
-			child->updateParams();
-		}
+	{    //这个for循环实际上是通过递归的方式，层层调用到每一层子节点的updateParamsImpl()，从而对每一层子节点更新
+		for (const auto &child : _children) {  //基于范围的for循环是C++11引入的一种循环结构，也称为foreach loop.
+			child->updateParams();                                 //这种循环结构允许遍历容器（比如数组、标准库容器、字符串等）中的每个元素，而无需使用传统的索引或迭代器来控制循环。
+		}                                                          //&child是容器中的每个元素的引用。
 
 		updateParamsImpl();
 	}
@@ -93,10 +93,10 @@ protected:
 	/**
 	 * @brief The implementation for this is generated with the macro DEFINE_PARAMETERS()
 	 */
-	virtual void updateParamsImpl() {}
+	virtual void updateParamsImpl() {}  //这个虚函数由DEFINE_PARAMETERS()这个宏函数在子类中去实现，DEFINE_PARAMETERS()定义在param.h中
 
 private:
 	/** @list _children The module parameter list of inheriting classes. */
-	List<ModuleParams *> _children;
-	ModuleParams *_parent{nullptr};
+	List<ModuleParams *> _children;  //子节点容器
+	ModuleParams *_parent{nullptr};  //父节点指针
 };

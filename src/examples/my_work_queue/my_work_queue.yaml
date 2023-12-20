@@ -1,0 +1,21 @@
+__max_num_config_instances: &max_num_config_instances 1
+
+module_name: MyWorkQueue
+
+parameters:
+  - group: MyWorkQueue
+    definitions:
+      MY_ATT_${i}_P:
+        description:
+          short: 姿态环PID控制器${i}的比例系数
+          long: |
+            该参数仅仅是模拟，并不具备实际的功能。
+
+        type: float
+        min: 0
+        max: 10
+        decimal: 2
+        increment: 0.01
+        num_instances: *max_num_config_instances
+        instance_start: 1
+        default: 1.00

@@ -1,0 +1,5 @@
+menuconfig EXAMPLES_MY_WORK_QUEUE
+	bool "my_work_queue"
+	default n
+	---help---
+		Enable support for my_work_queue

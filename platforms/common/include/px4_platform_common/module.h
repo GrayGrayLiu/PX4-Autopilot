@@ -37,11 +37,11 @@
 
 #pragma once
 
-#include <pthread.h>
+#include <pthread.h>  //是POSIX标准下的线程库头文件，它包含了在多线程编程中所需的函数、数据类型和常量的声明。这个头文件提供了创建、管理和同步线程的功能。互斥锁（mutex）就在其中
 #include <unistd.h>
 #include <stdbool.h>
 
-#include <px4_platform_common/atomic.h>
+#include <px4_platform_common/atomic.h>  //定义了原子操作和原子类型，这些操作可以确保在多线程环境中对内存位置进行原子操作，而不会产生数据竞争或不一致性。
 #include <px4_platform_common/time.h>
 #include <px4_platform_common/log.h>
 #include <px4_platform_common/tasks.h>
@@ -57,73 +57,73 @@
  *        there is only a single global mutex. This sounds bad, but we actually don't expect
  *        contention here, as module startup is sequential.
  */
-extern pthread_mutex_t px4_modules_mutex;
+extern pthread_mutex_t px4_modules_mutex;  //全局变量定义在module.c中，所有要使用互斥锁的地方都使用这一个全局锁
 
 /**
  * @class ModuleBase
  *      Base class for modules, implementing common functionality,
- *      such as 'start', 'stop' and 'status' commands.
- *      Currently does not support modules which allow multiple instances,
+ *      such as 'start', 'stop' and 'status' commands.  基类模块，实现通用功能，例如 'start'、'stop' 和 'status' 命令。
+ *      Currently does not support modules which allow multiple instances,  目前不支持允许多个实例的模块，例如 mavlink。
  *      such as mavlink.
  *
- *      The class is implemented as curiously recurring template pattern (CRTP).
- *      It allows to have a static object in the base class that is different for
- *      each module type, and call static methods from the base class.
- *
- * @note Required methods for a derived class:
+ *      The class is implemented as curiously recurring template pattern (CRTP).  该类被实现为奇异递归模板模式（Curiously Recurring Template Pattern，CRTP）。
+ *      It allows to have a static object in the base class that is different for  它允许在基类中有一个针对每个模块类型不同的静态对象，并调用基类的静态方法。
+ *      each module type, and call static methods from the base class.  CRTP实现方式就是类继承“用自己实例化的类模板”，这样形成了一种较为复杂的关系，子类可以调用
+ *                                                                      父类，父类也在调用子类。最后的效果就是，只需要在子类中实现模版的的接口，就可以实现父类模版针对该子类的功能
+ * @note Required methods for a derived class:  派生类需要实现的方法，即该模版接口
  * When running in its own thread:
  *      static int task_spawn(int argc, char *argv[])
  *      {
- *              // call px4_task_spawn_cmd() with &run_trampoline as startup method
- *              // optional: wait until _object is not null, which means the task got initialized (use a timeout)
- *              // set _task_id and return 0
- *              // on error return != 0 (and _task_id must be -1)
+ *              // call px4_task_spawn_cmd() with &run_trampoline as startup method  通过调用px4_task_spawn_cmd()并传递&run_trampoline作为启动方法来开始任务。
+ *              // optional: wait until _object is not null, which means the task got initialized (use a timeout)  可选地，可以等待_object不为null，表示任务已初始化（使用超时来等待）。
+ *              // set _task_id and return 0  设置_task_id并返回 0，表示成功启动任务。
+ *              // on error return != 0 (and _task_id must be -1)  如果出现错误，返回值应该不等于0（且_task_id必须是-1）。
  *      }
  *
  *      static T *instantiate(int argc, char *argv[])
  *      {
- *              // this is called from within the new thread, from run_trampoline()
- *              // parse the arguments
- *              // create a new object T & return it
- *              // or return nullptr on error
+ *              // this is called from within the new thread, from run_trampoline()  在新线程中从run_trampoline()中调用，必须实现此方法。
+ *              // parse the arguments  用于解析参数
+ *              // create a new object T & return it  并创建并返回一个新的对象T
+ *              // or return nullptr on error  如果出现错误，应该返回nullptr。
  *      }
  *
  *      static int custom_command(int argc, char *argv[])
  *      {
- *              // support for custom commands
- *              // it none are supported, just do:
- *              return print_usage("unrecognized command");
+ *              // support for custom commands  提供自定义命令的支持。
+ *              // it none are supported, just do:  如果不支持自定义命令，则
+ *              return print_usage("unrecognized command");  返回print_usage("unrecognized command")。
  *      }
  *
- *      static int print_usage(const char *reason = nullptr)
+ *      static int print_usage(const char *reason = nullptr)  用于打印模块的使用说明。
  *      {
- *              // use the PRINT_MODULE_* methods...
+ *              // use the PRINT_MODULE_* methods...  可以使用 PRINT_MODULE_* 等方法来打印相关信息。
  *      }
  *
- * When running on the work queue:
- * - custom_command & print_usage as above
+ * When running on the work queue:  当在工作队列上运行时：
+ * - custom_command & print_usage as above  custom_command和print_usage与上述一样（意思就是这两个函数还是按上面说的方法来实现，不变，言外之意是下面这个变了）
  *      static int task_spawn(int argc, char *argv[]) {
- *              // parse the arguments
- *              // set _object (here or from the work_queue() callback)
- *              // call work_queue() (with a custom cycle trampoline)
- *              // optional: wait until _object is not null, which means the task got initialized (use a timeout)
- *              // set _task_id to task_id_is_work_queue and return 0
- *              // on error return != 0 (and _task_id must be -1)
+ *              // parse the arguments  解析参数
+ *              // set _object (here or from the work_queue() callback)  设置_object（在此处或者从work_queue()回调函数中）
+ *              // call work_queue() (with a custom cycle trampoline)  调用work_queue()（使用自定义的周期（cycle）trampoline）
+ *              // optional: wait until _object is not null, which means the task got initialized (use a timeout)  可选：等待 _object 不为 null，表示任务已初始化（使用超时等待）
+ *              // set _task_id to task_id_is_work_queue and return 0  设置 _task_id 为 task_id_is_work_queue，并返回 0
+ *              // on error return != 0 (and _task_id must be -1)  出现错误时返回非 0（且 _task_id 必须为 -1）
  *      }
  */
 template<class T>
 class ModuleBase
 {
 public:
-	ModuleBase() : _task_should_exit{false} {}
-	virtual ~ModuleBase() {}
+	ModuleBase() : _task_should_exit{false} {}  //构造函数，使用了成员初始化列表语法
+	virtual ~ModuleBase() {}  //析构函数声明为虚函数，派生类的析构函数会覆盖~ModuleBase，虽然子类的析构函数不叫~ModuleBase，但对于构造函数和析构函数这两个特殊的函数，可以在名称不同的情况下实现覆盖
 
 	/**
 	 * @brief main Main entry point to the module that should be
-	 *        called directly from the module's main method.
-	 * @param argc The task argument count.
-	 * @param argc Pointer to the task argument variable array.
-	 * @return Returns 0 iff successful, -1 otherwise.
+	 *        called directly from the module's main method.  模块的主入口点，应该直接从模块的主方法调用。
+	 * @param argc The task argument count.  任务参数计数。
+	 * @param argc Pointer to the task argument variable array.  指向任务参数变量数组的指针。
+	 * @return Returns 0 iff successful, -1 otherwise.  返回0表示成功，否则返回-1。
 	 */
 	static int main(int argc, char *argv[])
 	{
@@ -131,20 +131,20 @@ public:
 		    strcmp(argv[1], "-h")    == 0 ||
 		    strcmp(argv[1], "help")  == 0 ||
 		    strcmp(argv[1], "info")  == 0 ||
-		    strcmp(argv[1], "usage") == 0) {
+		    strcmp(argv[1], "usage") == 0) {  //如果只输入了命令本身但没输入参数，或者输入的帮助类命令，则输出模块的用法（有哪些命令可用）
 			return T::print_usage();
 		}
 
-		if (strcmp(argv[1], "start") == 0) {
+		if (strcmp(argv[1], "start") == 0) {  //如果输入的启动命令
 			// Pass the 'start' argument too, because later on px4_getopt() will ignore the first argument.
 			return start_command_base(argc - 1, argv + 1);
 		}
 
-		if (strcmp(argv[1], "status") == 0) {
+		if (strcmp(argv[1], "status") == 0) {  //如果输入的查看状态命令
 			return status_command();
 		}
 
-		if (strcmp(argv[1], "stop") == 0) {
+		if (strcmp(argv[1], "stop") == 0) {  //如果输入的停止命令
 			return stop_command();
 		}
 
@@ -156,11 +156,11 @@ public:
 	}
 
 	/**
-	 * @brief Entry point for px4_task_spawn_cmd() if the module runs in its own thread.
-	 *        It does:
-	 *        - instantiate the object
-	 *        - call run() on it to execute the main loop
-	 *        - cleanup: delete the object
+	 * @brief Entry point for px4_task_spawn_cmd() if the module runs in its own thread.  //如果模块想单独作为一个进程运行，则需用px4_task_spawn_cmd()函数，
+	 *        It does:   它执行以下操作：                                                    //并在函数参数里设置入口点为&run_trampoline。
+	 *        - instantiate the object  实例化对象
+	 *        - call run() on it to execute the main loop  在对象上调用 run() 以执行主循环（这里的主循环其实就是指run函数本身）
+	 *        - cleanup: delete the object  清理：删除对象
 	 * @param argc The task argument count.
 	 * @param argc Pointer to the task argument variable array.
 	 * @return Returns 0 iff successful, -1 otherwise.
@@ -173,10 +173,10 @@ public:
 		argc -= 1;
 		argv += 1;
 
-		T *object = T::instantiate(argc, argv);
-		_object.store(object);
+		T *object = T::instantiate(argc, argv);  //子类实现instantiate方法，创建并初始化对象
+		_object.store(object);  //储存创建的对象（有点自己记录自己的味道，这是由奇异递归模板模式带来的）
 
-		if (object) {
+		if (object) {  //如果对象已创建，调用一次本模块对象的run函数
 			object->run();
 
 		} else {
@@ -199,21 +199,21 @@ public:
 	static int start_command_base(int argc, char *argv[])
 	{
 		int ret = 0;
-		lock_module();
-
+		lock_module();  //当前线程上互斥锁，上锁期间，当前线程独占共享资源。PX4中，由于所有进程共享一片内存，所以PX4中的互斥锁其实上升到了进程的级别
+                        //如果锁是可用的（没有被其他线程持有），该线程获得锁并继续执行。如果锁已经被其他线程持有，那么这个线程将被阻塞，直到获取到锁为止。
 		if (is_running()) {
 			ret = -1;
 			PX4_ERR("Task already running");
 
 		} else {
-			ret = T::task_spawn(argc, argv);
+			ret = T::task_spawn(argc, argv);  //在此处调用了模版参数的task_spawn方法，这个方法需要子类自己去实现
 
 			if (ret < 0) {
 				PX4_ERR("Task start failed (%i)", ret);
 			}
 		}
 
-		unlock_module();
+		unlock_module();  //当一个线程完成了对共享资源的访问，它需要释放互斥锁，这样其他线程才能获得锁并访问被保护的资源。
 		return ret;
 	}
 
@@ -231,7 +231,7 @@ public:
 			T *object = _object.load();
 
 			if (object) {
-				object->request_stop();
+				object->request_stop(); //这行代码知识将需要结束任务这个标志位记录下来，实际的配置在下面的do while中完成，扫尾工作由用户在任务中判断该标志位然后自己完成
 
 				unsigned int i = 0;
 
@@ -403,7 +403,7 @@ private:
 	/**
 	 * @brief lock_module Mutex to lock the module thread.
 	 */
-	static void lock_module()
+	static void lock_module()  //该方法其实是封装了POSIX接口下的互斥锁函数
 	{
 		pthread_mutex_lock(&px4_modules_mutex);
 	}
@@ -411,7 +411,7 @@ private:
 	/**
 	 * @brief unlock_module Mutex to unlock the module thread.
 	 */
-	static void unlock_module()
+	static void unlock_module()  //该方法其实是封装了POSIX接口下的互斥锁函数
 	{
 		pthread_mutex_unlock(&px4_modules_mutex);
 	}
@@ -421,16 +421,16 @@ private:
 };
 
 template<class T>
-px4::atomic<T *> ModuleBase<T>::_object{nullptr};
+px4::atomic<T *> ModuleBase<T>::_object{nullptr};  //模版外初始化ModuleBase<T>类的成员变量_object，px4::atomic<T *>是一个数据类型，代表原子指针
 
 template<class T>
-int ModuleBase<T>::_task_id = -1;
+int ModuleBase<T>::_task_id = -1;  //模版外初始化ModuleBase<T>类的成员变量_task_id，根据396行注释，-1代表任务无效
 
 
 #endif /* __cplusplus */
 
 
-__BEGIN_DECLS
+__BEGIN_DECLS  //下面的的头文件内容与实现“模块类的模版”无关，仅用来根据前面的注释自动生成documentation，documentation一般是给开发者用户提供的代码说明。
 
 /**
  * @brief Module documentation and command usage help methods.

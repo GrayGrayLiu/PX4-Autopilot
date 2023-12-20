@@ -1,0 +1,5 @@
+    menuconfig EXAMPLES_ATT_PID
+	bool "att_pid"
+	default n
+	---help---
+		Enable support for att_pid
